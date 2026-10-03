@@ -1,6 +1,6 @@
 # Structured Pruning of a ResNet-18 with Torch-Pruning
 
-> **Replication package.** The CIFAR-10 dataset is not included; it downloads automatically.
+> **Replication package.** The CIFAR-10 dataset is not included; it downloads automatically.git add results/
 > To reproduce the experiment from scratch:
 >
 > ```bash
@@ -276,6 +276,15 @@ random tensors, so no dataset download is required.
 Pruning removes channels; it does not change the number of bits per weight. On a
 microcontroller the usual pipeline is pruning *then* INT8 quantisation, and the two
 compose — roughly 4× from pruning at 50%, another 4× from quantisation.
+
+---
+## AI Disclosure
+ChatGPT (OpenAI), Claude(Sonet 5.5) was used as a supporting tool during the development and presentation of this project. Its use was limited to:
+- explaining and summarising concepts related to model pruning, structured/unstructured pruning, channel dependency, Torch-Pruning;
+- assisting with code review and refinement of parts of the ResNet-18/CIFAR-10 pruning, fine-tuning and benchmarking workflow;
+- helping interpret experimental results and present metrics;
+- supporting visual communication, including suggestions for diagrams/figure layouts and the structure, wording and organisation of presentation slides.
+All AI-assisted outputs were reviewed by the group. The students directly inspected and edited the source code, ran the experiments, verified benchmark results and figures, and validated the final presentation content. The group takes full responsibility for the correctness of the code, experimental results, visual materials, report and presentation.
 
 ---
 
