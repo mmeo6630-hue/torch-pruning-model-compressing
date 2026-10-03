@@ -1,6 +1,6 @@
 # Structured Pruning of a ResNet-18 with Torch-Pruning
 
-> **Replication package (code only).** Data, checkpoints, figures and the other notebooks are left out.
+> **Replication package.** The CIFAR-10 dataset is not included; it downloads automatically. Data, checkpoints, figures and the other notebooks are left out.
 > To reproduce the experiment from scratch:
 >
 > ```bash
@@ -30,12 +30,12 @@ block breaks the network unless something tracks the dependencies for you.
 <!-- HEADLINE:BEGIN -->
 | | Baseline | Pruned 50% + fine-tune | Change |
 |---|---|---|---|
-| **Parameters** | 11.17 M | 2.46 M | **−78.0%** |
-| **MACs** | 557 M | 134 M | **−76.0%** |
-| **Top-1 accuracy** | 93.20% | 92.25% | **−0.95 pts** |
-| Model size | 42.7 MB | 9.4 MB | −77.9% |
-| CPU latency, batch 1 | 6.81 ms | 3.23 ms | **2.11× faster** |
-| Activation memory | 7.06 MB | 3.26 MB | −53.9% |
+| **Parameters** | 11.17 M | 2.55 M | **−77.2%** |
+| **MACs** | 557 M | 127 M | **−77.2%** |
+| **Top-1 accuracy** | 92.87% | 92.17% | **−0.70 pts** |
+| Model size | 42.7 MB | 9.8 MB | −77.1% |
+| CPU latency, batch 1 | 17.89 ms | 6.93 ms | **2.58× faster** |
+| Activation memory | 7.06 MB | 3.04 MB | −57.0% |
 <!-- HEADLINE:END -->
 
 ---
@@ -45,10 +45,11 @@ block breaks the network unless something tracks the dependencies for you.
 ### 1. Deep networks carry redundant parameters
 
 Measure the L2 norm of each convolution filter — how much each output channel
-contributes — and the distribution has a long tail near zero. Those channels produce
-near-constant feature maps that downstream layers barely use. The redundancy is a product
-of *training*: on a randomly initialised network the norms cluster together and there is
-nothing obvious to cut.
+contributes — and many channels fall far below the strongest ones. In the last stage
+(`layer4.1.conv2`), half of the 512 channels have a norm below 0.16 of the strongest
+channel, while earlier layers are spread more widely (`layer3.0.conv2` has a median of
+0.60). Channels with a very small norm produce near-constant feature maps that
+downstream layers barely use.
 
 ![channel norms](results/figures/fig5_channel_norm_hist.png)
 
@@ -125,10 +126,10 @@ Since the graph comes from tracing rather than from a hard-coded list of archite
 the same code path handles residuals, concatenations, grouped convolutions and
 transformers.
 
-The grouping is visible in the result. Pruning 50% globally does not take 50% from every
-layer — it takes 29% to 61% depending on where the redundancy is — but layers that share
-a residual stream come out at *exactly* the same width, because the dependency graph will
-not let them differ:
+The grouping is visible in the result. Pruning 50% globally does not remove 50% from every
+layer — layers keep between 30% and 61% of their channels,
+depending on where the redundancy is — but layers that share a residual stream come out at
+*exactly* the same width, because the dependency graph will not let them differ:
 
 ![channels per layer](results/figures/fig4_channels_per_layer.png)
 
@@ -143,31 +144,31 @@ is where the near-zero channels are.
 <!-- RESULTS:BEGIN -->
 | Model                |   Accuracy (%) |   vs base (pts) |   Params (M) |   MACs (M) |   Size (MB) |   CPU lat (ms) |   Speed-up |
 |:---------------------|---------------:|----------------:|-------------:|-----------:|------------:|---------------:|-----------:|
-| ResNet18 baseline    |          93.2  |            0    |        11.17 |        557 |        42.7 |           6.81 |       1    |
-| unstructured 20%     |          93.21 |            0.01 |        11.17 |        557 |        42.7 |           6.81 |       1    |
-| unstructured 20% +ft |          93.04 |           -0.16 |        11.17 |        557 |        42.7 |           6.81 |       1    |
-| structured 20%       |          89.54 |           -3.66 |         7.23 |        319 |        27.6 |           5.34 |       1.28 |
-| structured 20% +ft   |          92.85 |           -0.35 |         7.23 |        319 |        27.6 |           5.34 |       1.28 |
-| unstructured 30%     |          93.15 |           -0.05 |        11.17 |        557 |        42.7 |           6.81 |       1    |
-| unstructured 30% +ft |          93    |           -0.2  |        11.17 |        557 |        42.7 |           6.81 |       1    |
-| structured 30%       |          84.81 |           -8.39 |         5.19 |        249 |        19.8 |           4.5  |       1.51 |
-| structured 30% +ft   |          92.73 |           -0.47 |         5.19 |        249 |        19.8 |           4.5  |       1.51 |
-| unstructured 40%     |          93.13 |           -0.07 |        11.17 |        557 |        42.7 |           6.81 |       1    |
-| unstructured 40% +ft |          93.01 |           -0.19 |        11.17 |        557 |        42.7 |           6.81 |       1    |
-| structured 40%       |          73.95 |          -19.25 |         3.67 |        186 |        14.1 |           3.82 |       1.78 |
-| structured 40% +ft   |          92.23 |           -0.97 |         3.67 |        186 |        14.1 |           3.82 |       1.78 |
-| unstructured 50%     |          92.78 |           -0.42 |        11.17 |        557 |        42.7 |           6.81 |       1    |
-| unstructured 50% +ft |          93.17 |           -0.03 |        11.17 |        557 |        42.7 |           6.81 |       1    |
-| structured 50%       |          41.3  |          -51.9  |         2.46 |        134 |         9.4 |           3.23 |       2.11 |
-| structured 50% +ft   |          92.25 |           -0.95 |         2.46 |        134 |         9.4 |           3.23 |       2.11 |
-| unstructured 60%     |          92.19 |           -1.01 |        11.17 |        557 |        42.7 |           6.81 |       1    |
-| unstructured 60% +ft |          93.26 |            0.06 |        11.17 |        557 |        42.7 |           6.81 |       1    |
-| structured 60%       |          20.96 |          -72.24 |         1.51 |         87 |         5.8 |           2.82 |       2.41 |
-| structured 60% +ft   |          91.49 |           -1.71 |         1.51 |         87 |         5.8 |           2.82 |       2.41 |
-| unstructured 70%     |          91.56 |           -1.64 |        11.17 |        557 |        42.7 |           6.81 |       1    |
-| unstructured 70% +ft |          93.16 |           -0.04 |        11.17 |        557 |        42.7 |           6.81 |       1    |
-| structured 70%       |          14.45 |          -78.75 |         0.84 |         51 |         3.3 |           2.52 |       2.7  |
-| structured 70% +ft   |          90.29 |           -2.91 |         0.84 |         51 |         3.3 |           2.52 |       2.7  |
+| ResNet18 baseline    |          92.87 |            0    |        11.17 |        557 |        42.7 |          17.89 |       1    |
+| unstructured 20%     |          92.86 |           -0.01 |        11.17 |        557 |        42.7 |          17.89 |       1    |
+| unstructured 20% +ft |          93.03 |            0.16 |        11.17 |        557 |        42.7 |          17.89 |       1    |
+| structured 20%       |          88.12 |           -4.75 |         7.34 |        327 |        28.1 |          12.45 |       1.44 |
+| structured 20% +ft   |          92.7  |           -0.17 |         7.34 |        327 |        28.1 |          12.45 |       1.44 |
+| unstructured 30%     |          92.8  |           -0.07 |        11.17 |        557 |        42.7 |          17.89 |       1    |
+| unstructured 30% +ft |          92.8  |           -0.07 |        11.17 |        557 |        42.7 |          17.89 |       1    |
+| structured 30%       |          75.39 |          -17.48 |         5.39 |        248 |        20.6 |          10.7  |       1.67 |
+| structured 30% +ft   |          92.41 |           -0.46 |         5.39 |        248 |        20.6 |          10.7  |       1.67 |
+| unstructured 40%     |          92.79 |           -0.08 |        11.17 |        557 |        42.7 |          17.89 |       1    |
+| unstructured 40% +ft |          92.55 |           -0.32 |        11.17 |        557 |        42.7 |          17.89 |       1    |
+| structured 40%       |          35.86 |          -57.01 |         3.8  |        181 |        14.6 |           8.61 |       2.08 |
+| structured 40% +ft   |          92.23 |           -0.64 |         3.8  |        181 |        14.6 |           8.61 |       2.08 |
+| unstructured 50%     |          92.65 |           -0.22 |        11.17 |        557 |        42.7 |          17.89 |       1    |
+| unstructured 50% +ft |          92.92 |            0.05 |        11.17 |        557 |        42.7 |          17.89 |       1    |
+| structured 50%       |          30.32 |          -62.55 |         2.55 |        127 |         9.8 |           6.93 |       2.58 |
+| structured 50% +ft   |          92.17 |           -0.7  |         2.55 |        127 |         9.8 |           6.93 |       2.58 |
+| unstructured 60%     |          92.33 |           -0.54 |        11.17 |        557 |        42.7 |          17.89 |       1    |
+| unstructured 60% +ft |          92.88 |            0.01 |        11.17 |        557 |        42.7 |          17.89 |       1    |
+| structured 60%       |          20.62 |          -72.25 |         1.59 |         84 |         6.1 |           5.58 |       3.21 |
+| structured 60% +ft   |          91.35 |           -1.52 |         1.59 |         84 |         6.1 |           5.58 |       3.21 |
+| unstructured 70%     |          91.89 |           -0.98 |        11.17 |        557 |        42.7 |          17.89 |       1    |
+| unstructured 70% +ft |          92.84 |           -0.03 |        11.17 |        557 |        42.7 |          17.89 |       1    |
+| structured 70%       |          10.39 |          -82.48 |         0.88 |         50 |         3.4 |           3.83 |       4.67 |
+| structured 70% +ft   |          89.58 |           -3.29 |         0.88 |         50 |         3.4 |           3.83 |       4.67 |
 
 ![accuracy](results/figures/fig1_accuracy_vs_ratio.png)
 
@@ -194,9 +195,6 @@ shape, so the baseline and all twelve unstructured variants compute exactly the 
 thing, and fine-tuning changes values rather than shapes. Latency is therefore measured
 once per architecture and shared, rather than 25 times; re-timing identical networks
 produced spreads of up to 15% from nothing but machine drift.
-
-Accuracy and fine-tuning ran on Apple MPS. Parameters, MACs and latency are measured on
-CPU, so they do not depend on which accelerator happens to be present.
 
 ---
 
@@ -242,8 +240,8 @@ on first use (170 MB) — do that before presenting.
 ### Reproducing the benchmark
 
 ```bash
-python scripts/train_baseline.py --epochs 30            # 68 min on Apple MPS -> 93.20%
-python scripts/run_benchmark.py --finetune-epochs 3    # 66 min
+python scripts/train_baseline.py --epochs 30            # 68 min on Apple MPS -> 93.20%; 28 mins on Colab T4
+python scripts/run_benchmark.py --finetune-epochs 3    # 66 min; 
 python scripts/run_benchmark.py --latency-only \
     --latency-runs 60 --latency-repeats 9              # 2 min, machine idle
 python scripts/make_plots.py
