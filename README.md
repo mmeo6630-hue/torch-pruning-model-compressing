@@ -1,6 +1,6 @@
 # Structured Pruning of a ResNet-18 with Torch-Pruning
 
-> **Replication package.** The CIFAR-10 dataset is not included; it downloads automatically. Data, checkpoints, figures and the other notebooks are left out.
+> **Replication package.** The CIFAR-10 dataset is not included; it downloads automatically.
 > To reproduce the experiment from scratch:
 >
 > ```bash
@@ -13,7 +13,7 @@
 >
 > `results/benchmark.csv` is included only because Step 10 of the notebook reads it. Image links below point to
 > `results/figures/`, which `make_plots.py` recreates.
-
+g
 
 **AIoT mid-term — Group 4**
 
