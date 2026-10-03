@@ -1,0 +1,11 @@
+data/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.pytest_cache/
+.DS_Store
+
+# Keep the baseline checkpoint (the demo loads it) but not the pruned variants,
+# which scripts/run_benchmark.py regenerates in seconds.
+checkpoints/*
+!checkpoints/resnet18_cifar10.pt

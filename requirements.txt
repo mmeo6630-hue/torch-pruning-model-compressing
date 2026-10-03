@@ -1,0 +1,9 @@
+torch>=2.0
+torchvision>=0.15
+torch-pruning>=1.5
+numpy>=1.23
+pandas>=1.5
+matplotlib>=3.6
+tabulate>=0.9
+jupyter
+pytest>=7.0
